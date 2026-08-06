@@ -1,0 +1,82 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Type checkers & linters
+.mypy_cache/
+.ruff_cache/
+.pytype/
+
+# Runtime logs (scripts/run_cli.py appends here)
+logs/
+*.log
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Hugging Face / local model caches (if stored in-repo)
+.cache/
+models/
+checkpoints/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE & editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Cursor (local editor metadata)
+.cursor/
+
+# OS
+.DS_Store
+.DS_Store?
+Thumbs.db
+Desktop.ini
+
+# Temporary / scratch files
+_test_*.py
+*.tmp
+*.bak
