@@ -33,6 +33,7 @@ class AgentState(TypedDict, total=False):
     top_score: float  # highest similarity score from retrieval, used as a confidence proxy
 
     draft_answer: str
+    parsed_sources: list[dict[str, str]]
     clarification_question: Optional[str]
 
     verification_passed: bool
@@ -40,4 +41,5 @@ class AgentState(TypedDict, total=False):
     revision_count: int  # hard-capped at MAX_REVISIONS in graph.py, prevents infinite loop
 
     final_response: dict  # matches schema.py / output_schema.json before returning to caller
+    draft_answer_as_schema: dict
     node_trace: list[str]  # append node names as they run, used for logging + routing tests
