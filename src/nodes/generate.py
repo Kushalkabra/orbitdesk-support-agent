@@ -46,7 +46,7 @@ def _build_messages(state: AgentState) -> list[dict[str, str]]:
 
 
 def parse_citations(text: str, retrieved: list[RetrievedChunk]) -> list[dict[str, str]]:
-    """Extract [source_id] citations that match retrieved chunks, preserving order."""
+    """Extract citations that match retrieved chunks, preserving order."""
     known_ids = {chunk["source_id"] for chunk in retrieved}
     passages_by_id = {chunk["source_id"]: chunk["passage"] for chunk in retrieved}
 
@@ -55,6 +55,12 @@ def parse_citations(text: str, retrieved: list[RetrievedChunk]) -> list[dict[str
     for match in CITATION_PATTERN.finditer(text):
         source_id = match.group(1)
         if source_id in known_ids and source_id not in seen:
+            seen.add(source_id)
+            parsed.append({"source_id": source_id, "passage": passages_by_id[source_id]})
+
+    for chunk in retrieved:
+        source_id = chunk["source_id"]
+        if source_id not in seen and re.search(rf"\b{re.escape(source_id)}\b", text):
             seen.add(source_id)
             parsed.append({"source_id": source_id, "passage": passages_by_id[source_id]})
     return parsed
