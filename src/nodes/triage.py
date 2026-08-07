@@ -44,6 +44,39 @@ SPECIFICITY_PATTERNS = [
     re.compile(r"\b(?:reauthorization_required|connector_internal_error|source_refresh_timeout)\b", re.I),
 ]
 
+ESCALATION_REPEATED_FAILURE_PATTERNS = [
+    re.compile(r"\b(?:two|three|\d+)\s+(?:runs?|times?)\s+in\s+a\s+row\b", re.I),
+    re.compile(r"\btwice\s+in\s+a\s+row\b", re.I),
+    re.compile(r"\bconsecutive\b", re.I),
+    re.compile(r"\b(?:repeated|repeating)\s+(?:failure|error|fail|issue|crash)s?\b", re.I),
+    re.compile(r"\b(?:failure|error|fail|issue|crash)s?\s+repeatedly\b", re.I),
+    re.compile(r"\bmultiple\s+(?:runs?|failures?|errors?|times)\b", re.I),
+]
+
+ESCALATION_REPETITION_KEYWORDS_PATTERN = re.compile(
+    r"\b(?:again|second\s+time|third\s+time|twice|repeatedly|multiple\s+times)\b", re.I
+)
+
+ESCALATION_FAILURE_OR_ERROR_PATTERN = re.compile(
+    r"\b(?:[a-z]+_[a-z0-9_]+|error\s+code|error|failure|failed|failing|crash|crashed|timeout)\b", re.I
+)
+
+ESCALATION_TROUBLESHOOTING_DONE_PATTERNS = [
+    re.compile(r"\balready\s+(?:checked|tried|verified|tested|performed|followed|completed)\b", re.I),
+    re.compile(
+        r"\b(?:checked|verified|tested|tried|followed)\s+(?:the\s+)?(?:dashboard|connections?|destinations?|logs?|docs?|documentation|status)\b",
+        re.I,
+    ),
+    re.compile(
+        r"\b(?:tried|followed|performed)\s+(?:the\s+)?(?:documented|troubleshooting|standard)\s+(?:steps|checks|instructions|guides?)\b",
+        re.I,
+    ),
+    re.compile(
+        r"\b(?:documented|troubleshooting)\s+(?:steps|checks|instructions)\s+(?:were\s+)?(?:already\s+)?(?:done|performed|completed|tried|checked)\b",
+        re.I,
+    ),
+]
+
 CLASSIFIER_LABELS: list[Classification] = [
     "answerable",
     "requires_clarification",
@@ -76,6 +109,21 @@ def _matches_out_of_scope(question: str) -> tuple[bool, str]:
             return True, f"Matched prompt-injection pattern: {pattern.pattern!r}"
 
     return False, ""
+
+
+def _matches_escalation_pattern(question: str) -> bool:
+    has_repeated_failure = any(
+        pattern.search(question) for pattern in ESCALATION_REPEATED_FAILURE_PATTERNS
+    ) or (
+        bool(ESCALATION_FAILURE_OR_ERROR_PATTERN.search(question))
+        and bool(ESCALATION_REPETITION_KEYWORDS_PATTERN.search(question))
+    )
+
+    has_troubleshooting_done = any(
+        pattern.search(question) for pattern in ESCALATION_TROUBLESHOOTING_DONE_PATTERNS
+    )
+
+    return has_repeated_failure and has_troubleshooting_done
 
 
 def _has_specificity(question: str) -> bool:
@@ -111,6 +159,15 @@ def run_triage(state: AgentState) -> dict:
         return {
             "classification": "out_of_scope",
             "triage_reason": reason,
+        }
+
+    if _matches_escalation_pattern(question):
+        return {
+            "classification": "requires_escalation",
+            "triage_reason": (
+                "Matched escalation pattern: repeated failure after documented checks "
+                "were already performed (see KB-008 escalation conditions)."
+            ),
         }
 
     if _is_vague(question):
