@@ -53,7 +53,11 @@ def route_after_triage(state: AgentState) -> str:
 def route_after_verify(state: AgentState) -> str:
     if state["verification_passed"]:
         return "finalize_ok"
-    if state.get("revision_count", 0) < MAX_REVISIONS:
+    # Note: run_verification increments revision_count BEFORE this router function runs.
+    # On the 1st failure, revision_count becomes 1. With MAX_REVISIONS = 1, checking <= MAX_REVISIONS
+    # allows exactly 1 retry (back to generate). On 2nd failure, revision_count becomes 2 (> MAX_REVISIONS),
+    # routing to finalize_safe_failure.
+    if state.get("revision_count", 0) <= MAX_REVISIONS:
         return "generate"
     return "finalize_safe_failure"
 

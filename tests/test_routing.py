@@ -56,7 +56,14 @@ def test_q003_requires_clarification(graph, sample_questions):
     assert final_response.get("clarification_question") is not None
 
 
-@pytest.mark.parametrize("question_id", ["Q-001", "Q-002", "Q-004"])
+def test_q004_requires_escalation(graph, sample_questions):
+    result = _run(graph, sample_questions["Q-004"]["question"])
+    final_response = result["final_response"]
+
+    assert final_response["classification"] == "requires_escalation"
+
+
+@pytest.mark.parametrize("question_id", ["Q-001", "Q-002"])
 def test_answerable_questions_run_full_pipeline(graph, sample_questions, question_id):
     result = _run(graph, sample_questions[question_id]["question"])
     final_response = result["final_response"]
@@ -83,6 +90,5 @@ def test_verification_loop_guard(monkeypatch, sample_questions):
     node_trace = result["node_trace"]
 
     assert final_response["classification"] == "safe_failure"
-    assert node_trace.count("run_verification") >= 1
-    assert node_trace.count("run_verification") <= 2
-    assert node_trace.count("run_generation") <= 2
+    assert node_trace.count("run_generation") == 2
+    assert node_trace.count("run_verification") == 2
