@@ -150,16 +150,6 @@ that a forced double verification failure terminates in `safe_failure` rather th
 - The revision cap is fixed at one retry. A more sophisticated system might vary this based
   on how close the first attempt came to passing verification.
 
-## What I'd improve with more time
-
-- Swap the lexical-overlap grounding check for a proper NLI entailment model, so
-  verification failures are based on semantic contradiction, not word overlap.
-- Add a reranking step after initial retrieval (a small cross-encoder) to improve precision
-  on questions where the right passage doesn't have the single highest embedding
-  similarity score.
-- Expand the escalation detection rules to cover more of the specific conditions listed in
-  KB-008, rather than the two patterns currently implemented.
-
 ## AI tool usage disclosure
 
 This project was built using Cursor (AI coding assistant) and Claude for planning,
