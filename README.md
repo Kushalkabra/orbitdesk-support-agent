@@ -90,11 +90,11 @@ Every run appends a full record (question, node trace, final response, timestamp
 
 ## Models used
 
-| Model | Purpose | Approx. load time |
-|---|---|---|
-| `sentence-transformers/all-MiniLM-L6-v2` | Embedding for retrieval | ~6-9s |
-| `facebook/bart-large-mnli` | Zero-shot triage fallback classification | ~2s |
-| `Qwen/Qwen2.5-1.5B-Instruct` | Answer generation | ~2.5-4s |
+| Model | Revision | Purpose | Approx. load time |
+|---|---|---|---|
+| `sentence-transformers/all-MiniLM-L6-v2` | `1110a243fdf4706b3f48f1d95db1a4f5529b4d41` | Embedding for retrieval | ~6-9s online / <0.5s cached offline |
+| `facebook/bart-large-mnli` | `d7645e127eaf1aefc7862fd59a17a5aa8558b8ce` | Zero-shot triage fallback classification | ~2s online / <1s cached offline |
+| `Qwen/Qwen2.5-1.5B-Instruct` | `989aa7980e4cf806f80c7fef2b1adb7bc71aa306` | Answer generation | ~2.5-4s online / <1s cached offline |
 
 Generation latency (CPU, no GPU acceleration used for the LLM in the final runs) ranged
 from roughly 48 seconds to just over 2 minutes per call, depending on answer length. This
@@ -104,10 +104,16 @@ triage add well under a second combined once models are loaded.
 
 ## Hardware used
 
-- CPU-only inference for the LLM in final runs (see note above on latency)
+- CPU: AMD Ryzen 5 5600H with Radeon Graphics
+- RAM: ~7.5 GB (7,522 MB total)
 - GPU available: NVIDIA GTX 1650 (4GB VRAM) — used selectively; kept the embedding and
   classification models off-GPU to leave headroom, since 4GB is tight once the generation
   model is loaded alongside them
+- CPU-only inference used for the LLM in final runs (see model table above for latency
+  figures)
+- This is a genuinely constrained machine for a 1.5B-parameter local model plus two
+  smaller models running concurrently, which directly shaped the model-size and
+  CPU/GPU-placement decisions documented above.
 
 ## Sample test cases
 
