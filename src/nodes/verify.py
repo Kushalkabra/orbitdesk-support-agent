@@ -2,7 +2,10 @@
 Verification node: validate citations, lexical grounding, and output schema.
 """
 
+import logging
 import re
+
+logger = logging.getLogger(__name__)
 
 from pydantic import ValidationError
 
@@ -173,42 +176,38 @@ def _build_support_response(state: AgentState, parsed_sources: list[dict[str, st
             "Valid source citations and answer text overlaps retrieved evidence "
             f"(retrieval top_score={confidence:.3f})."
         ),
+        warnings=state.get("warnings", []),
     )
 
 
 def run_verification(state: AgentState) -> dict:
     revision = state.get("revision_count", 0)
-    print(f"[VERIFY] Starting verification (attempt/revision_count={revision})")
-
     parsed_sources = state.get("parsed_sources")
     retrieved = state.get("retrieved", [])
     draft_answer = state.get("draft_answer", "")
 
     citations_ok, citation_reason = check_citations(parsed_sources, retrieved)
     if not citations_ok:
-        print(f"[VERIFY] Citation check: FAILED — reason: {citation_reason!r} — draft_answer was:\n{draft_answer}")
+        logger.info("verify attempt=%d FAILED: %s", revision, citation_reason)
         return _failure(state, citation_reason)
-    print("[VERIFY] Citation check: PASSED")
 
     urls_ok, url_reason = check_no_fabricated_urls(draft_answer)
     if not urls_ok:
-        print(f"[VERIFY] URL check: FAILED — draft_answer was:\n{draft_answer}")
+        logger.info("verify attempt=%d FAILED: %s", revision, url_reason)
         return _failure(state, url_reason)
-    print("[VERIFY] URL check: PASSED")
 
     grounded_ok, grounding_reason = check_lexical_grounding(draft_answer, retrieved)
     if not grounded_ok:
-        print(f"[VERIFY] Lexical grounding check: FAILED — draft_answer was:\n{draft_answer}")
+        logger.info("verify attempt=%d FAILED: %s", revision, grounding_reason)
         return _failure(state, grounding_reason)
-    print("[VERIFY] Lexical grounding check: PASSED")
 
     try:
         response = _build_support_response(state, parsed_sources)
     except ValidationError:
-        print(f"[VERIFY] Schema validation: FAILED — draft_answer was:\n{draft_answer}")
+        logger.info("verify attempt=%d FAILED: schema validation", revision)
         return _failure(state, "schema validation failed")
 
-    print("[VERIFY] All verification checks PASSED")
+    logger.info("verify attempt=%d PASSED", revision)
     return {
         "verification_passed": True,
         "draft_answer_as_schema": response.model_dump(),
