@@ -15,12 +15,13 @@ wired together with conditional routing over a shared typed state (`src/state.py
 ```
 triage --out_of_scope-------------------------------------> END (safe out-of-scope response)
 triage --requires_clarification----------------------------> END (clarification question)
-triage --requires_escalation (rule-based pattern match)----> END (escalation response)
-triage --answerable-----------------------------------------> retrieve -> generate -> verify
+triage --answerable / requires_escalation--> retrieve -> generate -> verify
 verify --pass------------------------------------------------> END (final answer)
 verify --fail, revision_count < 1-----------------------------> generate (revise with feedback)
 verify --fail, revision_count >= 1-----------------------------> END (safe_failure)
 ```
+
+Note: answerable and requires_escalation intentionally share the same retrieve → generate → verify pipeline rather than routing to separate end states. An escalation-worthy question still benefits from a grounded, cited answer describing what to do next — the distinction is carried in the final response's requires_human field (set to true for escalation), not through a separate graph path. finalize_ok handles both outcomes; only classification and requires_human differ.
 
 **Triage** — two-stage classification. Deterministic keyword/regex rules run first and
 catch three cases directly, without any model call: out-of-scope requests (refunds,
@@ -114,10 +115,7 @@ All five required cases are demonstrated:
 
 1. **Directly answerable** — Q-002 ("Can a Viewer create an API credential?"). Single-source
    answer from KB-002 / CASE-1058, correctly says no.
-2. **Requires two documents** — Q-004 (repeated `render_failed` after documented checks).
-   Triage's deterministic escalation rule routes this to `requires_escalation` directly
-   (per KB-008's explicit escalation conditions), and the underlying evidence spans
-   CASE-1103 and KB-004.
+2. **Requires two documents** — Q-004 (repeated `render_failed` after documented checks). Triage's deterministic rule classifies this as `requires_escalation`, which flows through the same retrieve → generate → verify pipeline as an answerable question, but produces a response with `requires_human: true`. The underlying evidence spans CASE-1103 and KB-004.
 3. **Ambiguous, needs clarification** — Q-003 ("sync is not working"). No object, error
    code, or symptom given; triage asks for the specific fields KB-006 requires before
    diagnosis is possible.
