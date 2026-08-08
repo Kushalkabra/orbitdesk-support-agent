@@ -45,8 +45,8 @@ SPECIFICITY_PATTERNS = [
 ]
 
 ESCALATION_REPEATED_FAILURE_PATTERNS = [
-    re.compile(r"\b(?:two|three|\d+)\s+(?:runs?|times?)\s+in\s+a\s+row\b", re.I),
-    re.compile(r"\btwice\s+in\s+a\s+row\b", re.I),
+    re.compile(r"\b(?:two|three|\d+)\s+(?:\w+\s+)*(?:runs?|times?|failures?|errors?|attempts?)\s+in\s+a\s+row\b", re.I),
+    re.compile(r"\btwice\s+(?:\w+\s+)*in\s+a\s+row\b", re.I),
     re.compile(r"\bconsecutive\b", re.I),
     re.compile(r"\b(?:repeated|repeating)\s+(?:failure|error|fail|issue|crash)s?\b", re.I),
     re.compile(r"\b(?:failure|error|fail|issue|crash)s?\s+repeatedly\b", re.I),
