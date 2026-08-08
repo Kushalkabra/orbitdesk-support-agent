@@ -81,6 +81,7 @@ STOPWORDS = {
 SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
 WORD_PATTERN = re.compile(r"\b[a-z0-9_]+\b", re.I)
 CITATION_STRIP = re.compile(r"\[[^\]]+\]")
+URL_PATTERN = re.compile(r"https?://|www\.", re.I)
 
 MIN_SIGNIFICANT_WORD_LEN = 2
 MIN_SENTENCE_OVERLAP = 0.15
@@ -107,6 +108,12 @@ def check_citations(
         if source.get("source_id") not in retrieved_ids:
             return False, "no valid source citations"
 
+    return True, ""
+
+
+def check_no_fabricated_urls(draft_answer: str) -> tuple[bool, str]:
+    if URL_PATTERN.search(draft_answer):
+        return False, "answer contains a fabricated URL not present in source material"
     return True, ""
 
 
@@ -170,22 +177,38 @@ def _build_support_response(state: AgentState, parsed_sources: list[dict[str, st
 
 
 def run_verification(state: AgentState) -> dict:
+    revision = state.get("revision_count", 0)
+    print(f"[VERIFY] Starting verification (attempt/revision_count={revision})")
+
     parsed_sources = state.get("parsed_sources")
     retrieved = state.get("retrieved", [])
+    draft_answer = state.get("draft_answer", "")
 
     citations_ok, citation_reason = check_citations(parsed_sources, retrieved)
     if not citations_ok:
+        print(f"[VERIFY] Citation check: FAILED — reason: {citation_reason!r} — draft_answer was:\n{draft_answer}")
         return _failure(state, citation_reason)
+    print("[VERIFY] Citation check: PASSED")
 
-    grounded_ok, grounding_reason = check_lexical_grounding(state.get("draft_answer", ""), retrieved)
+    urls_ok, url_reason = check_no_fabricated_urls(draft_answer)
+    if not urls_ok:
+        print(f"[VERIFY] URL check: FAILED — draft_answer was:\n{draft_answer}")
+        return _failure(state, url_reason)
+    print("[VERIFY] URL check: PASSED")
+
+    grounded_ok, grounding_reason = check_lexical_grounding(draft_answer, retrieved)
     if not grounded_ok:
+        print(f"[VERIFY] Lexical grounding check: FAILED — draft_answer was:\n{draft_answer}")
         return _failure(state, grounding_reason)
+    print("[VERIFY] Lexical grounding check: PASSED")
 
     try:
         response = _build_support_response(state, parsed_sources)
     except ValidationError:
+        print(f"[VERIFY] Schema validation: FAILED — draft_answer was:\n{draft_answer}")
         return _failure(state, "schema validation failed")
 
+    print("[VERIFY] All verification checks PASSED")
     return {
         "verification_passed": True,
         "draft_answer_as_schema": response.model_dump(),
