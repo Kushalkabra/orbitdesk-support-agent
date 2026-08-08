@@ -5,6 +5,13 @@ CLI entrypoint for running the OrbitDesk support agent on a single question.
 
 from __future__ import annotations
 
+# Force Hugging Face libraries to use cached models and avoid network calls for offline execution.
+# Using setdefault allows callers to override by setting environment variables beforehand.
+import os
+
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
+os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+
 import argparse
 import json
 import sys
