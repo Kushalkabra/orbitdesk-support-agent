@@ -8,7 +8,7 @@ from src.ingest import build_index
 from src.models import get_embedder
 from src.state import AgentState, RetrievedChunk
 
-TOP_K = 4
+TOP_K = 6
 
 _INDEX = build_index()
 
@@ -37,6 +37,7 @@ def run_retrieval(state: AgentState) -> dict:
     retrieved: list[RetrievedChunk] = [
         {
             "source_id": chunk["source_id"],
+            "section_title": chunk.get("section_title", ""),
             "passage": chunk["passage"],
             "score": score,
         }

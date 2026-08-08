@@ -16,7 +16,15 @@ CITATION_PATTERN = re.compile(r"\[([^\]]+)\]")
 def _format_passages(retrieved: list[RetrievedChunk]) -> str:
     if not retrieved:
         return "(No passages retrieved.)"
-    return "\n\n".join(f"[{chunk['source_id']}] {chunk['passage']}" for chunk in retrieved)
+    formatted = []
+    for chunk in retrieved:
+        source_id = chunk["source_id"]
+        sec_title = chunk.get("section_title", "").strip() if chunk.get("section_title") else ""
+        if sec_title:
+            formatted.append(f"[{source_id} {sec_title}] {chunk['passage']}")
+        else:
+            formatted.append(f"[{source_id}] {chunk['passage']}")
+    return "\n\n".join(formatted)
 
 
 def _build_messages(state: AgentState) -> list[dict[str, str]]:
@@ -24,8 +32,8 @@ def _build_messages(state: AgentState) -> list[dict[str, str]]:
     instructions = (
         "You are an OrbitDesk support assistant.\n"
         "- Only use the provided passages below.\n"
-        "- Cite the source_id(s) you use inline or on a clearly separated line, "
-        "using the [source_id] format shown with each passage.\n"
+        "- Cite the source passage(s) you use inline or on a clearly separated line, "
+        "using the bracketed label format shown at the start of each passage (e.g. [KB-003 Changing the Timezone] or [KB-003]).\n"
         "- If the passages do not answer the question, say plainly that the supplied "
         "documentation does not contain enough information rather than guessing."
     )
@@ -46,23 +54,58 @@ def _build_messages(state: AgentState) -> list[dict[str, str]]:
 
 
 def parse_citations(text: str, retrieved: list[RetrievedChunk]) -> list[dict[str, str]]:
-    """Extract citations that match retrieved chunks, preserving order."""
+    """Extract citations that match retrieved chunks by source_id, preserving order."""
     known_ids = {chunk["source_id"] for chunk in retrieved}
-    passages_by_id = {chunk["source_id"]: chunk["passage"] for chunk in retrieved}
+    chunks_by_id: dict[str, list[RetrievedChunk]] = {}
+    for chunk in retrieved:
+        chunks_by_id.setdefault(chunk["source_id"], []).append(chunk)
 
     parsed: list[dict[str, str]] = []
     seen: set[str] = set()
+
     for match in CITATION_PATTERN.finditer(text):
-        source_id = match.group(1)
-        if source_id in known_ids and source_id not in seen:
-            seen.add(source_id)
-            parsed.append({"source_id": source_id, "passage": passages_by_id[source_id]})
+        bracket_content = match.group(1).strip()
+        matched_id = None
+        matched_chunk = None
+
+        for source_id in known_ids:
+            if re.search(rf"\b{re.escape(source_id)}\b", bracket_content):
+                matched_id = source_id
+                chunks = chunks_by_id[source_id]
+                matched_chunk = chunks[0]
+                for chunk in chunks:
+                    sec = chunk.get("section_title", "")
+                    if sec and sec.lower() in bracket_content.lower():
+                        matched_chunk = chunk
+                        break
+                break
+
+        if matched_id and matched_id not in seen:
+            seen.add(matched_id)
+            sec_title = matched_chunk.get("section_title", "")
+            if sec_title:
+                print(f"Parsed citation: source_id={matched_id!r}, section_title={sec_title!r}")
+            else:
+                print(f"Parsed citation: source_id={matched_id!r}")
+            parsed.append({
+                "source_id": matched_id,
+                "passage": matched_chunk["passage"],
+            })
 
     for chunk in retrieved:
         source_id = chunk["source_id"]
         if source_id not in seen and re.search(rf"\b{re.escape(source_id)}\b", text):
             seen.add(source_id)
-            parsed.append({"source_id": source_id, "passage": passages_by_id[source_id]})
+            sec_title = chunk.get("section_title", "")
+            if sec_title:
+                print(f"Parsed bare citation: source_id={source_id!r}, section_title={sec_title!r}")
+            else:
+                print(f"Parsed bare citation: source_id={source_id!r}")
+            parsed.append({
+                "source_id": source_id,
+                "passage": chunk["passage"],
+            })
+
     return parsed
 
 
