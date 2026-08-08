@@ -17,8 +17,9 @@ Classification = Literal[
 ]
 
 
-class RetrievedChunk(TypedDict):
+class RetrievedChunk(TypedDict, total=False):
     source_id: str  # e.g. "KB-003" or "CASE-1041"
+    section_title: Optional[str]
     passage: str
     score: float
 
@@ -34,6 +35,7 @@ class AgentState(TypedDict, total=False):
 
     draft_answer: str
     parsed_sources: list[dict[str, str]]
+    warnings: list[str]
     clarification_question: Optional[str]
 
     verification_passed: bool
