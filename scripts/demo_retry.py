@@ -8,6 +8,12 @@
 # On any subsequent call the real generation logic runs normally, allowing the
 # retry to produce a properly cited answer.
 
+# Force Hugging Face libraries to use cached models and avoid network calls for offline execution (mirrors run_cli.py).
+import os
+
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
+os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+
 import json
 import sys
 from pathlib import Path
